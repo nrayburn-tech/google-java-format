@@ -510,4 +510,13 @@ public final class FormatterTest {
                 + "  }\n"
                 + "}\n");
   }
+
+  @Test
+  public void removeLeadingNewLinesBeforeCopyright() throws Exception {
+    assertThat(
+            new Formatter()
+                .formatSource(
+                    "\n" + "\n" + "\n" + "/* Test Copyright */\n" + "\n" + "class Foo { }"))
+        .isEqualTo("/* Test Copyright */\n" + "\n" + "class Foo {}\n");
+  }
 }

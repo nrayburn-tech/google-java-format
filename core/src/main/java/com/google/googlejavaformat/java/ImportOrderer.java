@@ -46,7 +46,9 @@ public class ImportOrderer {
    */
   public static String reorderImports(String text, Style style) throws FormatterException {
     ImmutableList<Tok> toks = JavaInput.buildToks(text, CLASS_START);
-    return new ImportOrderer(text, toks, style).reorderImports();
+    text = new ImportOrderer(text, toks, style).reorderImports();
+    return new ImportOrderer(text, JavaInput.buildToks(text, CLASS_START), style)
+        .separateCopyrightFromImportOrClass();
   }
 
   /**
@@ -60,6 +62,50 @@ public class ImportOrderer {
   @Deprecated
   public static String reorderImports(String text) throws FormatterException {
     return reorderImports(text, Style.GOOGLE);
+  }
+
+  private String separateCopyrightFromImportOrClass() throws FormatterException {
+    Optional<Integer> maybeFirstImportOrClass = findIdentifier(0, IMPORT_OR_CLASS_OR_PACKAGE_START);
+    if (maybeFirstImportOrClass.isEmpty()) {
+      return text;
+    }
+    int importStart = maybeFirstImportOrClass.get();
+    int unindentedFirstImportStart = unindent(importStart);
+
+    // No copyright.
+    if (unindentedFirstImportStart == 0) {
+      return text;
+    }
+
+    // Already correct spacing between copyright and first relevant token.
+    if (unindentedFirstImportStart > 2
+        && isNewlineToken(unindentedFirstImportStart - 1)
+        && isNewlineToken(unindentedFirstImportStart - 2)
+        && isSlashStarComment(unindentedFirstImportStart - 3)) {
+      return text;
+    }
+
+    // Missing a newline between copyright and first relevant token.
+    if (unindentedFirstImportStart > 1
+        && isNewlineToken(unindentedFirstImportStart - 1)
+        && isSlashStarComment(unindentedFirstImportStart - 2)) {
+      return tokString(0, unindentedFirstImportStart)
+          + lineSeparator
+          + text.substring(toks.get(unindentedFirstImportStart).getPosition());
+    }
+
+    // Excess space between copyright and first relevant token.
+    if (unindentedFirstImportStart > 1
+        && toks.subList(1, unindentedFirstImportStart).stream()
+            .allMatch(tok -> tok.getText().isBlank())
+        && isSlashStarComment(0)) {
+      return tokString(0, unindentedFirstImportStart).strip()
+          + lineSeparator
+          + lineSeparator
+          + text.substring(toks.get(unindentedFirstImportStart).getPosition());
+    }
+
+    return text;
   }
 
   private String reorderImports() throws FormatterException {
@@ -118,6 +164,16 @@ public class ImportOrderer {
    */
   private static final ImmutableSet<String> IMPORT_OR_CLASS_START =
       ImmutableSet.of("import", "class", "interface", "enum");
+
+  /**
+   * We use this set to find the first import or package to detect the latest position that a file
+   * copyright header could exist.
+   */
+  private static final ImmutableSet<String> IMPORT_OR_CLASS_OR_PACKAGE_START =
+      ImmutableSet.<String>builder()
+          .addAll(IMPORT_OR_CLASS_START)
+          .add("abstract", "final", "package", "private", "protected", "public")
+          .build();
 
   /**
    * A {@link Comparator} that orders {@link Import}s by Google Style, defined at
@@ -475,6 +531,10 @@ public class ImportOrderer {
 
   private boolean isSlashSlashCommentToken(int i) {
     return toks.get(i).isSlashSlashComment();
+  }
+
+  private boolean isSlashStarComment(int i) {
+    return toks.get(i).isSlashStarComment();
   }
 
   private boolean isNewlineToken(int i) {

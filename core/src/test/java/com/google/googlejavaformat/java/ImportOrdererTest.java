@@ -547,6 +547,59 @@ public class ImportOrdererTest {
             "",
             "interface Test {}",
           }
+        },
+        {
+          {
+            "/*",
+            " * Copyright 2016 Google Inc.",
+            " */",
+            "public class Blim {}",
+          },
+          {
+            "/*",
+            " * Copyright 2016 Google Inc.",
+            " */",
+            "",
+            "public class Blim {}",
+          },
+        },
+        {
+          {
+            "/* Some Fancy License */",
+            "package foo;",
+            "",
+            "import com.google.first.Bar;",
+            "",
+            "public class Blim {}",
+          },
+          {
+            "/* Some Fancy License */",
+            "",
+            "package foo;",
+            "",
+            "import com.google.first.Bar;",
+            "",
+            "public class Blim {}",
+          },
+        },
+        {
+          {
+            "/* Some Fancy License */",
+            "",
+            "",
+            "",
+            "",
+            "package foo;",
+            "",
+            "public class Blim {}",
+          },
+          {
+            "/* Some Fancy License */",
+            "",
+            "package foo;",
+            "",
+            "public class Blim {}",
+          },
         }
       };
 
